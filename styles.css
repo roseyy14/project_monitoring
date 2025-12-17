@@ -1,0 +1,163 @@
+/*
+  Styles for auth pages, themed to match the municipality logo
+*/
+
+:root {
+  --bg: #283a5e;          /* Deep blue from the logo's outer ring */
+  --panel: #ffffff;       /* White for the card background */
+  --text: #34495e;        /* Dark slate blue for primary text */
+  --muted: #8d99ae;       /* Muted blue-gray for subtext */
+  --border: #dde2e9;      /* Light blue-gray for borders */
+  --primary-btn: #34495e;  /* Primary button color */
+  --primary-btn-hover: #2c3e50; /* Darker shade for button hover */
+  --focus-ring: 0 0 0 4px rgba(52, 73, 94, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.auth-wrapper {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.logo-container {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.logo-img {
+  width: 100px; /* Adjust size as needed */
+  height: 100px;
+}
+
+.auth-header {
+  text-align: center;
+}
+
+.auth-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.subtext {
+  margin: 0 0 22px 0;
+  color: var(--muted);
+}
+
+.auth-form {
+  margin: 0 0 8px 0;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 1rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+input::placeholder {
+  color: #9ca3af;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary-btn);
+  box-shadow: var(--focus-ring);
+}
+
+.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 160ms ease, opacity 160ms ease;
+}
+
+.button.primary {
+  background: var(--primary-btn);
+  color: #ffffff;
+}
+
+.button.primary:hover {
+  background: var(--primary-btn-hover);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  margin-top: 20px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.link {
+  color: var(--primary-btn);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 360px) {
+  .auth-card {
+    padding: 22px;
+  }
+}

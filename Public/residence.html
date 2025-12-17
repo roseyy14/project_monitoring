@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Public Portal</title>
+    <link rel="stylesheet" href="residence.css" />
+  </head>
+  <body class="admin-page">
+    <div class="brgy-topbar">
+      <div class="inner">
+        <a class="brgy-brand" href="residence.html">
+          <img src="../assets/logo.png" alt="Municipality Logo" class="brand-logo" />
+          Public Portal
+        </a>
+      </div>
+    </div>
+    <main class="auth-wrapper">
+      <section class="auth-card" aria-labelledby="public-title">
+        <section class="requests-section" aria-labelledby="requests-title">
+          <h2>Approved Projects</h2>
+          <div style="overflow-x:auto;">
+            <table id="requestsTable" class="requests-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Budget</th>
+                </tr>
+              </thead>
+              <tbody id="requestsGrid"></tbody>
+            </table>
+          </div>
+        </section>
+        <section id="reportsSection" class="reports-section" style="margin-top:32px;">
+          <h2>Project Reports</h2>
+          <div class="charts-grid">
+            <div class="chart-card compact" style="grid-column: 1 / -1;">
+              <div class="chart-title">Projects by Status</div>
+              <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-card compact square">
+              <div class="chart-title">Budget Overview</div>
+              <canvas id="budgetChart"></canvas>
+            </div>
+            
+            <div class="chart-card compact square">
+              <div class="chart-title">Budget Allocation by Type</div>
+              <canvas id="expenseCategoryChart"></canvas>
+            </div>
+            
+            <div class="chart-card compact">
+              <div class="chart-title">Spending Timeline</div>
+              <canvas id="spendingTimelineChart"></canvas>
+            </div>
+            <div class="chart-card compact" style="grid-column: 1 / -1;">
+              <div class="chart-title">Projects per Barangay</div>
+              <canvas id="barangayChart"></canvas>
+            </div>
+          </div>
+        </section>
+        <div id="projectsModal" class="modal-overlay" aria-hidden="true">
+          <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="projectsModalTitle">
+            <div class="modal-header">
+              <h3 id="projectsModalTitle">Projects</h3>
+              <button class="modal-close" id="projectsModalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body">
+              <div style="overflow-x:auto;">
+                <table id="projectsTable" class="requests-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Location</th>
+                      <th>Budget</th>
+                      <th>Submitted By</th>
+                    </tr>
+                  </thead>
+                  <tbody id="projectsGrid"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="../scripts/core/firebase.js"></script>
+    <script type="module" src="../scripts/pages/residence.js"></script>
+  </body>
+</html>

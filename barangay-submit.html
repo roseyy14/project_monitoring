@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>New Request • Barangay Official</title>
+  <link rel="stylesheet" href="barangay.css" />
+</head>
+
+<body class="barangay-page">
+  <div class="brgy-topbar">
+    <div class="inner">
+      <a class="brgy-brand" href="barangay.html">
+        <img src="assets/logo.png" alt="Municipality Logo" class="brand-logo" />
+        Barangay Portal
+      </a>
+      <div class="right">
+        <div class="brgy-navlinks">
+          <a href="barangay.html">Dashboard</a>
+          <a href="barangay-submit.html" class="active">New Request</a>
+        </div>
+        <button class="button" id="signOutBtn" type="button">Sign out</button>
+      </div>
+    </div>
+  </div>
+  <main class="auth-wrapper">
+    <section class="auth-card" aria-labelledby="submit-title">
+      <header class="auth-header">
+        <h1 id="submit-title">Submit a new request</h1>
+        <p class="subtext">Provide details for admin review and approval</p>
+      </header>
+
+      <form id="requestForm" class="auth-form brgy-form-grid" novalidate>
+        <div class="form-group span-2">
+          <label for="title">Project title</label>
+          <input id="title" name="title" type="text" required placeholder="e.g., New Footbridge over River" />
+        </div>
+
+        <div class="form-group">
+          <label for="category">Category</label>
+          <select id="category" name="category" required>
+            <option value="" selected disabled>Select category</option>
+            <option value="bridge">Bridge</option>
+            <option value="road_repair">Road repair</option>
+            <option value="drainage">Drainage</option>
+            <option value="flood_control">Flood control</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="location">Location / Barangay area</label>
+          <select id="location" name="location" required>
+            <option value="" selected disabled>Select location</option>
+            <option value="OYANDIC">OYANDIC</option>
+            <option value="POBLACION 1">POBLACION 1</option>
+            <option value="POBLACION 1-A">POBLACION 1-A</option>
+            <option value="CALAPI">CALAPI</option>
+            <option value="BONGA">BONGA</option>
+            <option value="NEW MINAROG">NEW MINAROG</option>
+            <option value="ANGYAP">ANGYAP</option>
+            <option value="MAYPANGE">MAYPANGE</option>
+            <option value="CANDUMACOL">CANDUMACOL</option>
+            <option value="CANATUAN">CANATUAN</option>
+            <option value="MALOBAGO">MALOBAGO</option>
+            <option value="INALAD">INALAD</option>
+            <option value="CALUYAHAN">CALUYAHAN</option>
+            <option value="PAMAMAS-AN">PAMAMAS-AN</option>
+            <option value="PUSONGAN">PUSONGAN</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+                      <label for="urgency">Urgency</label>
+                      <select id="urgency" name="urgency" required>
+                          <option value="" selected disabled>Select urgency</option>
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                    </div>
+
+                            <div class="form-group">
+                      <label for="budgetYear">Target Budget Year</label>
+                      <select id="budgetYear" name="budgetYear" required>
+                          <option value="" selected disabled>Select year</option>
+                                      </select>
+                    </div>
+
+                            <div class="form-group span-2">
+                      <label for="budget">Project Cost (₱)</label>
+                      <input id="budget" name="budget" type="number" min="0" step="0.01"
+            placeholder="e.g., 150000.00" />
+                    </div>
+
+        <div class="form-group span-2">
+          <label for="details">Description / Details</label>
+          <textarea id="details" name="details" rows="4" required
+            placeholder="Describe the need, affected households, safety concerns, etc."></textarea>
+        </div>
+
+        <div class="form-group span-2">
+          <label for="contact">Contact information (optional)</label>
+          <input id="contact" name="contact" type="text" placeholder="e.g., 09XX-XXX-XXXX or email" />
+        </div>
+
+        <button class="button primary" type="submit">Submit request</button>
+        <div data-error></div>
+        <div data-success></div>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="scripts/pages/barangay-submit.js"></script>
+</body>
+
+</html>

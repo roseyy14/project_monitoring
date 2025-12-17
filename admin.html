@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin</title>
+  <link rel="stylesheet" href="admin.css" />
+  <style>
+    .image-gallery {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 16px 0;
+    }
+
+    .image-gallery img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .image-gallery img:hover {
+      transform: scale(1.05);
+      border-color: #3b82f6;
+    }
+
+    .modal-section-title {
+      grid-column: 1 / -1;
+      margin: 16px 0 8px 0;
+      padding-top: 8px;
+      font-weight: bold;
+      color: #111827;
+      font-size: 1.05rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .sub-text {
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: normal;
+    }
+  </style>
+</head>
+
+<body class="admin-page">
+  <div class="brgy-topbar">
+    <div class="inner">
+      <a class="brgy-brand" href="admin.html">
+        <img src="assets/logo.png" alt="Municipality Logo" class="brand-logo" />
+        DILG Portal
+      </a>
+      <div class="right">
+        <div class="brgy-navlinks">
+          <a href="#" id="dashboardNav" class="active">Dashboard</a>
+          <a href="#" id="reportsNav">Reports</a>
+        </div>
+        <button class="button" id="signOutBtn" type="button">Sign out</button>
+      </div>
+    </div>
+  </div>
+  <main class="auth-wrapper">
+    <section class="auth-card" aria-labelledby="admin-title">
+      <nav class="brgy-navbar" aria-label="Filter navigation">
+        <div class="left">
+          <strong>All Requests</strong>
+          <div class="filters" role="tablist" aria-label="Filter requests">
+            <button class="brgy-chip active" data-filter="all" role="tab" aria-selected="true">All</button>
+            <button class="brgy-chip" data-filter="pending" role="tab">Pending</button>
+            <button class="brgy-chip" data-filter="approved" role="tab">Approved</button>
+            <button class="brgy-chip" data-filter="rejected" role="tab">Rejected</button>
+          </div>
+        </div>
+      </nav>
+
+      <section class="requests-section" aria-labelledby="requests-title">
+        <div style="overflow-x:auto;">
+          <table id="requestsTable" class="requests-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Budget</th>
+                <th>Submitted By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requestsGrid"></tbody>
+          </table>
+        </div>
+      </section>
+      <section id="reportsSection" class="reports-section" style="display:none; margin-top:32px;">
+        <div class="report-controls-wrapper">
+          <div class="report-controls">
+            <div class="control-group">
+              <label>Year</label>
+              <select id="filterYear">
+                <option value="all">All Years</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label>Month</label>
+              <select id="filterMonth">
+                <option value="all">All Months</option>
+                <option value="0">January</option>
+                <option value="1">February</option>
+                <option value="2">March</option>
+                <option value="3">April</option>
+                <option value="4">May</option>
+                <option value="5">June</option>
+                <option value="6">July</option>
+                <option value="7">August</option>
+                <option value="8">September</option>
+                <option value="9">October</option>
+                <option value="10">November</option>
+                <option value="11">December</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label>Location</label>
+              <select id="filterLocation">
+                <option value="all">All Barangays</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label>Budget Range</label>
+              <select id="filterBudget">
+                <option value="all">Any Amount</option>
+                <option value="small">Small (< ₱50k)</option>
+                <option value="medium">Medium (₱50k - ₱500k)</option>
+                <option value="large">Large (> ₱500k)</option>
+              </select>
+            </div>
+
+            <button id="resetFiltersBtn" class="button">Reset</button>
+          </div>
+        </div>
+
+        <h2>Project Reports</h2>
+        <div class="charts-grid">
+          <div class="chart-card compact" style="grid-column: 1 / -1;">
+            <div class="chart-title">Projects by Status</div>
+            <canvas id="statusChart"></canvas>
+          </div>
+          <div class="chart-card compact square">
+            <div class="chart-title">Budget Overview</div>
+            <canvas id="budgetChart"></canvas>
+          </div>
+
+          <div class="chart-card compact square">
+            <div class="chart-title">Budget Allocation by Type</div>
+            <canvas id="expenseCategoryChart"></canvas>
+          </div>
+
+          <div class="chart-card compact">
+            <div class="chart-title">Spending Timeline</div>
+            <canvas id="spendingTimelineChart"></canvas>
+          </div>
+          <div class="chart-card compact" style="grid-column: 1 / -1;">
+            <div class="chart-title">Projects per Barangay</div>
+            <canvas id="barangayChart"></canvas>
+          </div>
+        </div>
+      </section>
+      <div id="requestModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+          <div class="modal-header">
+            <h3 id="modalTitle">Details</h3>
+            <button class="modal-close" id="modalCloseBtn" type="button">Close</button>
+          </div>
+          <div class="modal-body">
+            <div class="detail-grid" id="modalContent"></div>
+          </div>
+        </div>
+      </div>
+      <div id="projectsModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="projectsModalTitle">
+          <div class="modal-header">
+            <h3 id="projectsModalTitle">Projects</h3>
+            <button class="modal-close" id="projectsModalCloseBtn" type="button">Close</button>
+          </div>
+          <div class="modal-body">
+            <div style="overflow-x:auto;">
+              <table id="projectsTable" class="requests-table">
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th>Budget</th>
+                    <th>Submitted By</th>
+                  </tr>
+                </thead>
+                <tbody id="projectsGrid"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./scripts/core/firebase.js"></script>
+  <script type="module" src="./scripts/core/role-guard.js"></script>
+  <script type="module" src="./scripts/pages/admin.js"></script>
+</body>
+
+</html>

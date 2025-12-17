@@ -1,0 +1,594 @@
+/* Admin Portal Styles
+   Themed to match the Motiong, Samar logo (Blue Theme)
+*/
+
+:root {
+  /* Themed Palette */
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --primary: #283a5e;           /* Vibrant blue from the logo */
+  --text: #212529;              /* Standard dark text */
+  --muted: #6c757d;             /* Muted gray */
+  --border: #dee2e6;            /* Light border */
+  --focus-ring: 0 0 0 4px rgba(40, 58, 94, 0.25);
+
+  /* Status Colors */
+  --success: #198754;           /* Green */
+  --warning: #ffc107;           /* Yellow */
+  --error: #dc3545;             /* Red */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===================================================
+   Layout & Card Containers
+   =================================================== */
+body.admin-page .auth-wrapper {
+  padding: 0;
+  min-height: auto;
+  place-items: initial;
+}
+
+body.admin-page .auth-card {
+  max-width: 1100px;
+  width: 100%;
+  margin: 24px auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ===================================================
+   Top Navigation Bar
+   =================================================== */
+.brgy-topbar {
+  width: 100%;
+  background: var(--primary);
+  color: #ffffff;
+  border-bottom: 1px solid #1a263e;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.brgy-topbar .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  background: #fff;
+  object-fit: cover;
+  margin-right: 10px;
+  vertical-align: middle;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.brgy-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.brgy-brand:visited,
+.brgy-brand:active,
+.brgy-brand:focus {
+  color: #fff;
+  text-decoration: none;
+}
+
+.brgy-topbar .right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Topbar Buttons */
+.brgy-topbar .button {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.brgy-topbar .button:hover {
+  background: #ffffff;
+  color: var(--primary);
+}
+
+/* Topbar Navigation Links */
+.brgy-navlinks {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brgy-navlinks a {
+  text-decoration: none;
+  color: #e9ecef;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.brgy-navlinks a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.brgy-navlinks a.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ===================================================
+   Filter Navigation (Inside Card)
+   =================================================== */
+.brgy-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brgy-navbar .left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brgy-navbar .left strong {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.brgy-navbar .filters {
+  display: flex;
+  gap: 8px;
+}
+
+.brgy-chip {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.brgy-chip:hover {
+  background: #f8f9fa;
+  color: var(--text);
+}
+
+.brgy-chip.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* ===================================================
+   Tables & Data
+   =================================================== */
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.requests-table th, 
+.requests-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.requests-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+}
+
+.requests-table tr:hover {
+  background: #f1f5f9;
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.status-approved {
+  color: #0f5132;
+  background-color: #d1e7dd;
+}
+.status-pending {
+  color: #856404;
+  background-color: #fff3cd;
+}
+.status-rejected {
+  color: #842029;
+  background-color: #f8d7da;
+}
+
+/* ===================================================
+   Admin Action Buttons
+   =================================================== */
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-actions .button {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 160ms ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.admin-actions .button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Info button */
+.admin-actions .button.info {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.admin-actions .button.info:hover {
+  background: #1a263e;
+}
+
+/* Approve button */
+.admin-actions .button[data-action="approve"] {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+.admin-actions .button[data-action="approve"]:hover {
+  background: #148a3c;
+}
+
+/* Deny button */
+.admin-actions .button[data-action="deny"] {
+  background: var(--error);
+  color: white;
+  border-color: var(--error);
+}
+.admin-actions .button[data-action="deny"]:hover {
+  background: #b91c1c;
+}
+
+/* ===================================================
+   Themed Modal Styles (Barangay Portal Theme)
+   =================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-container {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 700px;
+  /* Scrollable Logic: */
+  max-height: 85vh;       /* Limit height to 85% of screen */
+  overflow-y: auto;       /* Add scrollbar if content is too long */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border: none;
+  display: flex;
+  flex-direction: column;
+}
+
+/* THEMED HEADER */
+.modal-header {
+  background-color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  position: sticky; /* Keeps header fixed at top while scrolling */
+  top: 0;
+  z-index: 5;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.modal-body {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===================================================
+   Modal Details Layout (Left Aligned)
+   =================================================== */
+
+.detail-row {
+  display: grid;
+  /* Changed from 180px to 140px for a tighter left column */
+  grid-template-columns: 140px 1fr; 
+  align-items: start; /* Align to top in case text wraps */
+  padding: 14px 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-row:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* CHANGED: Align left instead of right */
+  text-align: left; 
+  padding-right: 10px;
+}
+
+.detail-value {
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* Sub-headers */
+.modal-section-header {
+  background: #e2e8f0;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  padding: 12px 24px; /* Slightly more padding */
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  margin-top: 0;
+  margin-bottom: 0;
+  text-align: left; /* Ensure headers are left aligned too */
+}
+
+/* Image Gallery in Admin Modal */
+.image-gallery {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 16px 0;
+}
+.image-gallery img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.image-gallery img:hover {
+  transform: scale(1.05);
+  border-color: var(--primary);
+}
+
+/* ===================================================
+   Reports & Charts
+   =================================================== */
+.reports-section h2 {
+  text-align: left;
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(17, 24, 39, 0.04);
+  position: relative;
+  height: 320px;
+}
+
+.chart-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.chart-card canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.report-controls-wrapper {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.report-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.control-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.report-controls select {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 0.9rem;
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.report-controls select:hover {
+  border-color: #3b82f6;
+}
+
+/* ===================================================
+   Responsive Adjustments
+   =================================================== */
+@media (max-width: 768px) {
+  body.admin-page .auth-card {
+    margin: 16px;
+    padding: 20px;
+  }
+  
+  .brgy-navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Modal Mobile View */
+  .detail-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 12px 20px;
+    align-items: start;
+  }
+  
+  .detail-label {
+    text-align: left;
+    padding-right: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+  
+  .detail-value {
+    padding-left: 0;
+    font-size: 1rem;
+  }
+}

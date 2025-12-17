@@ -1,0 +1,433 @@
+/*
+  Residence/Public page styles, themed to match the municipality logo
+*/
+
+:root {
+  /* Themed Palette */
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --primary: #283a5e;          /* Main theme color (dark slate blue) */
+  --text: #2c3e50;            /* Darker blue for primary text */
+  --muted: #8d99ae;           /* Muted blue-gray for subtext */
+  --border: #dde2e9;         /* Light blue-gray for borders */
+  --focus-ring: 0 0 0 4px rgba(52, 73, 94, 0.2);
+
+  /* Status Colors */
+  --success: #16a34a;          /* A more balanced green */
+  --warning: #f59e0b;          /* A rich amber/yellow */
+  --error: #dc2626;           /* A clear, modern red */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Admin page specific layout */
+body.admin-page .auth-wrapper {
+  padding: 0;
+  min-height: auto;
+  place-items: initial;
+}
+
+body.admin-page .auth-card {
+  max-width: 1100px;
+  width: 100%;
+  margin: 24px auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(17, 24, 39, 0.04);
+}
+  
+/* Top bar */
+.brgy-topbar {
+  width: 100%;
+  background: var(--primary); /* Use theme color */
+  color: #ffffff;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+  
+.brgy-topbar .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+  
+.brand-logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #1976d2;
+  background: #fff;
+  object-fit: cover;
+  margin-right: 10px;
+  vertical-align: middle;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.10);
+}
+.brgy-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+.brgy-brand:visited,
+.brgy-brand:active,
+.brgy-brand:focus {
+  color: #fff;
+  text-decoration: none;
+}
+  
+.brgy-topbar .right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+  
+.brgy-topbar .button {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+  
+.brgy-topbar .button:hover {
+  background: #ffffff;
+  color: var(--primary);
+}
+  
+/* Navigation links */
+.brgy-navlinks {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+  
+.brgy-navlinks a {
+  text-decoration: none;
+  color: #e5e7eb;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+  
+.brgy-navlinks a:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+  
+.brgy-navlinks a.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+  
+/* Filters bar inside card */
+.brgy-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+  
+.brgy-navbar .left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+  
+.brgy-navbar .left strong {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+  
+.brgy-navbar .filters {
+  display: flex;
+  gap: 8px;
+}
+  
+.brgy-chip {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+  
+.brgy-chip:hover {
+  background: #f9fafb;
+  color: var(--text);
+}
+  
+.brgy-chip.active {
+  background: var(--primary); /* Use theme color for active state */
+  color: #ffffff;
+  border-color: var(--primary);
+}
+
+/* Requests Table */
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  margin-bottom: 24px;
+  font-size: 0.9rem;
+}
+
+.requests-table th, .requests-table td {
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.requests-table th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.requests-table tr:hover {
+  background: #eff6ff; /* Light blue hover for theme consistency */
+}
+
+/* Status Pills */
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-approved {
+  background: #e7f7ed;
+  color: var(--success);
+  border: 1px solid #b7e2c5;
+}
+
+.status-pending {
+  background: #fffbeb;
+  color: var(--warning);
+  border: 1px solid #fde68a;
+}
+
+.status-rejected {
+  background: #fde8e8;
+  color: var(--error);
+  border: 1px solid #f9c6c6;
+}
+
+/* Admin Actions Buttons in Table */
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+  
+.admin-actions .button {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+  
+.admin-actions .button:hover {
+  background: #f9fafb;
+  border-color: #ced4da;
+}
+  
+.admin-actions .button.primary {
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+  
+.admin-actions .button.primary:hover {
+  background: #148a3c;
+}
+  
+.admin-actions .button.danger {
+  background: var(--error);
+  color: white;
+  border-color: var(--error);
+}
+  
+.admin-actions .button.danger:hover {
+  background: #b91c1c;
+}
+  
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+}
+
+.modal-overlay.open {
+  display: flex;
+}
+
+.modal-container {
+  background: var(--panel);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 160ms ease;
+}
+
+.modal-close:hover {
+  background: #f9fafb;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  row-gap: 12px;
+  column-gap: 16px;
+}
+
+.detail-label {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+/* Reports section and charts */
+.reports-section h2 {
+  text-align: left;
+  margin-bottom: 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.chart-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(17, 24, 39, 0.04);
+  position: relative; /* Crucial for chart responsiveness */
+  height: 320px;      /* Set container height for chart to fill */
+}
+
+.chart-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.chart-card canvas {
+  width: 100%;
+  height: 100%;
+  display: block; /* Removes any extra space below the canvas */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  body.admin-page .auth-card {
+    margin: 16px;
+    padding: 20px;
+  }
+
+  .brgy-navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

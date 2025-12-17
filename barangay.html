@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Barangay Official</title>
+    <link rel="stylesheet" href="barangay.css" />
+  </head>
+  <body class="barangay-page dashboard">
+    <div class="brgy-topbar">
+      <div class="inner">
+        <a class="brgy-brand" href="barangay.html">
+          <img src="assets/logo.png" alt="Municipality Logo" class="brand-logo" />
+          Barangay Portal
+        </a>
+        <div class="right">
+          <div class="brgy-navlinks">
+            <a href="barangay.html" class="active">Dashboard</a>
+            <a href="barangay-submit.html">New Request</a>
+          </div>
+          <button class="button" id="signOutBtn" type="button">Sign out</button>
+        </div>
+      </div>
+    </div>
+    <main class="auth-wrapper">
+      <section class="auth-card" aria-labelledby="brgy-title">
+        <nav class="brgy-navbar" aria-label="Filter navigation">
+          <div class="left">
+            <strong>Requests</strong>
+            <div class="filters" role="tablist" aria-label="Filter requests">
+              <button class="brgy-chip active" data-filter="all" role="tab" aria-selected="true">All</button>
+              <button class="brgy-chip" data-filter="pending" role="tab">Pending</button>
+              <button class="brgy-chip" data-filter="approved" role="tab">Approved</button>
+              <button class="brgy-chip" data-filter="rejected" role="tab">Rejected</button>
+            </div>
+          </div>
+        </nav>
+
+        <section class="requests-section" aria-labelledby="requests-title">
+          <h2 id="requests-title" class="subtext">Your submitted requests</h2>
+          <div style="overflow-x:auto;">
+            <table id="requestsTable" class="requests-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="requestsGrid"></tbody>
+            </table>
+          </div>
+        </section>
+        <div id="brgyRequestModal" class="modal-overlay" aria-hidden="true">
+          <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="brgyModalTitle">
+            <div class="modal-header">
+              <h3 id="brgyModalTitle">Request details</h3>
+              <button class="modal-close" id="brgyModalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body">
+              <div class="detail-grid" id="brgyModalContent"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./scripts/core/firebase.js"></script>
+    <script type="module" src="./scripts/core/role-guard.js"></script>
+    <script type="module" src="./scripts/pages/barangay.js"></script>
+  </body>
+  </html>
+
+

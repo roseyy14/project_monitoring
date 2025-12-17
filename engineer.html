@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Engineer</title>
+    <link rel="stylesheet" href="engineer.css" />
+    <style>
+      /* Added styles for the image gallery inside the modal */
+      .image-gallery {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        margin-top: 8px;
+      }
+      .image-gallery img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .image-gallery img:hover {
+        transform: scale(1.05);
+        border-color: #3b82f6;
+      }
+    </style>
+  </head>
+  <body class="engineer-page">
+    <div class="brgy-topbar">
+      <div class="inner">
+        <a class="brgy-brand" href="engineer.html">Engineer Portal</a>
+        <div class="right">
+          <button class="button" id="signOutBtn" type="button">Sign out</button>
+        </div>
+      </div>
+    </div>
+    <main class="auth-wrapper">
+      <section class="auth-card" aria-labelledby="eng-title">
+        <nav class="brgy-navbar" aria-label="Filter navigation">
+          <div class="left">
+            <strong>Approved Projects</strong>
+            <div class="filters" role="tablist" aria-label="Filter projects">
+              <button class="brgy-chip active" data-filter="all" role="tab" aria-selected="true">All</button>
+              <button class="brgy-chip" data-filter="not-started" role="tab">Not Started</button>
+              <button class="brgy-chip" data-filter="in-progress" role="tab">In Progress</button>
+            </div>
+          </div>
+        </nav>
+
+        <section class="requests-section" aria-labelledby="requests-title">
+          <div style="overflow-x:auto;">
+            <table id="requestsTable" class="requests-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Progress</th>
+                  <th>Budget Used</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="requestsGrid"></tbody>
+            </table>
+          </div>
+        </section>
+        
+        <div id="projectModal" class="modal-overlay" aria-hidden="true">
+          <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+              <h3 id="modalTitle">Project details</h3>
+              <button class="modal-close" id="modalCloseBtn" type="button">Close</button>
+            </div>
+            <div class="modal-body">
+              <div class="detail-grid project-summary" id="modalContent"></div>
+              
+              <h4 class="section-title" style="margin: 16px 0 4px 0;">Project Photos</h4>
+              <div id="imageGallery" class="image-gallery"></div>
+              
+              <div class="divider" aria-hidden="true"></div>
+              
+              <h4 class="section-title" style="margin: 0 0 8px 0;">Update project</h4>
+              <div class="brgy-form-grid" style="margin-top: 4px;">
+                <div class="form-group full-width">
+                  <label for="projectStatus">Project Status</label>
+                  <select id="projectStatus" name="projectStatus">
+                    <option value="not-started">Not Started</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="finished">Finished</option>
+                  </select>
+                </div>
+                <div class="form-group full-width">
+                  <label for="projectProgress">Progress (%)</label>
+                  <input id="projectProgress" name="projectProgress" type="number" min="0" max="100" value="0" />
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="proofImage">Upload Photo Proof</label>
+                  <input id="proofImage" type="file" accept="image/*" />
+                  <small style="font-size: 0.75rem; color: #666;">Select an image to document progress.</small>
+                </div>
+
+                <div class="form-group full-width">
+                  <label for="projectNotes">Notes</label>
+                  <textarea id="projectNotes" name="projectNotes" rows="3" placeholder="Describe what's new or done..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="expenseAmount">New Expense Amount (₱) (optional)</label>
+                  <input id="expenseAmount" name="expenseAmount" type="number" min="0" step="0.01" placeholder="e.g., 7000" />
+                </div>
+                <div class="form-group">
+                  <label for="expenseDate">Date bought (optional)</label>
+                  <input id="expenseDate" name="expenseDate" type="date" />
+                </div>
+                <div class="form-group full-width">
+                  <label for="expenseNote">What was bought (optional)</label>
+                  <input id="expenseNote" name="expenseNote" type="text" placeholder="e.g., Equipment rental" />
+                </div>
+                <div class="form-group" style="align-self:end; justify-self:end;">
+                  <button type="button" id="updateProjectBtn" class="button primary" style="margin-top: 4px;">Update Project</button>
+                </div>
+              </div>
+
+              <div class="expenses-section" style="margin-top: 16px;">
+                <div class="expenses-header">
+                  <h4 class="section-title" style="margin: 0 0 8px 0;">Expense history</h4>
+                </div>
+                <div style="overflow-x:auto;">
+                  <table class="requests-table compact" style="margin: 0;">
+                    <thead>
+                      <tr>
+                        <th style="width: 140px;">Date</th>
+                        <th style="width: 160px;">Amount</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="expensesList"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <script type="module" src="./scripts/core/firebase.js"></script>
+    <script type="module" src="./scripts/core/role-guard.js"></script>
+    <script type="module" src="./scripts/pages/engineer.js"></script>
+  </body>
+</html>

@@ -2,11 +2,19 @@ import { protectPage } from '../core/role-guard.js';
 import { auth, db } from '../core/firebase.js';
 import { signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp, where, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getCurrentUserRole, formatRequestDataForRole, escapeHtml } from '../core/role-utils.js';
 
 // --- CLOUDINARY CONFIGURATION ---
 const CLOUDINARY_CLOUD_NAME = 'dimiumaxg';
 const CLOUDINARY_PRESET = 'project update';
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
+// --- HARDCODED CONTRACTOR DETAILS ---
+// ONLY Contractor Name and Address will be saved to the database.
+const DEFAULT_CONTRACTOR = {
+  contractorName: "JFR CONSTRUCTION INC.",
+  contractorAddress: "17 BLISS CANLAPWAS, CATBALOGAN CITY, SAMAR"
+};
 
 protectPage(['engineer']);
 
@@ -19,13 +27,31 @@ const modal = document.getElementById('projectModal');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 const modalContent = document.getElementById('modalContent');
 const imageGallery = document.getElementById('imageGallery');
+const certificateGallery = document.getElementById('certificateGallery');
 
 // Form Elements
 const projectStatus = document.getElementById('projectStatus');
 const projectProgress = document.getElementById('projectProgress');
 const proofImageInput = document.getElementById('proofImage');
+const certificateImageInput = document.getElementById('certificateImage');
+const certificateSection = document.getElementById('certificateSection');
 const updateProjectBtn = document.getElementById('updateProjectBtn');
 const projectNotes = document.getElementById('projectNotes');
+
+// Certificate section toggle based on status
+if (projectStatus) {
+  projectStatus.addEventListener('change', () => {
+    if (certificateSection) {
+      if (projectStatus.value === 'finished') {
+        certificateSection.style.display = 'block';
+        if (certificateImageInput) certificateImageInput.required = true;
+      } else {
+        certificateSection.style.display = 'none';
+        if (certificateImageInput) certificateImageInput.required = false;
+      }
+    }
+  });
+}
 
 // Expense/Financial Elements
 const expensesList = document.getElementById('expensesList');
@@ -59,9 +85,6 @@ async function uploadImageToCloudinary(file) {
   }
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"]+/g, (s) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
-}
 
 function renderRequests(docs) {
   requestsGrid.innerHTML = '';
@@ -113,7 +136,7 @@ function renderRequests(docs) {
       </td>
       <td>${budgetUsed}</td>
       <td>
-        <button class="button primary" data-action="update">Update Progress</button>
+        <button class="button primary small" data-action="update">Update</button>
       </td>
     `;
     requestsGrid.appendChild(tr);
@@ -171,56 +194,35 @@ signOutBtn.addEventListener('click', async () => {
   window.location.href = 'index.html';
 });
 
-// --- UPDATED OPEN MODAL FUNCTION ---
-function openModal(id, data) {
+// --- OPEN MODAL (Uses role-based display) ---
+async function openModal(id, data) {
   currentProjectId = id;
   dataCache[id] = data || {};
   
-  const budget = data.budget || 0;
-  const spent = data.amountSpent || 0;
-  const financialPercentage = budget > 0 ? ((spent / budget) * 100).toFixed(1) : 0;
-
-  // 1. GENERATE READ-ONLY TOP SECTION
-  // We use "detail-row" here to match the CSS zebra striping
-  modalContent.innerHTML = `
-    <div class="detail-row">
-      <div class="detail-label">Title</div>
-      <div class="detail-value">${escapeHtml(data.title || '')}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Category</div>
-      <div class="detail-value">${escapeHtml(data.category || '')}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Location</div>
-      <div class="detail-value">${escapeHtml(data.location || '')}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Budget</div>
-      <div class="detail-value">${data.budget != null ? '₱ ' + escapeHtml(String(data.budget)) : '—'}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Contractor</div>
-      <div class="detail-value">${escapeHtml(data.contractorName || '—')}</div>
-    </div>
-    
-    <div class="detail-row" style="background-color: #eff6ff;">
-      <div class="detail-label" style="color:#3b82f6">Physical Status</div>
-      <div class="detail-value" style="color:#3b82f6; font-weight:bold;">${data.progress || 0}% Completed</div>
-    </div>
-    <div class="detail-row" style="background-color: #fff7ed;">
-      <div class="detail-label" style="color:#f59e42">Financial Status</div>
-      <div class="detail-value" style="color:#f59e42; font-weight:bold;">${financialPercentage}% Utilized (₱${spent})</div>
-    </div>
-  `;
+  const role = await getCurrentUserRole();
+  
+  // 1. GENERATE READ-ONLY TOP SECTION (using role-based formatter)
+  modalContent.innerHTML = formatRequestDataForRole(data, role);
 
   // 2. FILL FORM INPUTS (Bottom Section)
   projectStatus.value = data.projectStatus || 'not-started';
   projectProgress.value = data.progress || 0;
   if (projectNotes) projectNotes.value = data.notes || '';
-  
+
+  // Handle certificate section visibility
+  if (certificateSection && certificateImageInput) {
+    if (projectStatus.value === 'finished') {
+      certificateSection.style.display = 'block';
+      certificateImageInput.required = true;
+    } else {
+      certificateSection.style.display = 'none';
+      certificateImageInput.required = false;
+    }
+  }
+
   // Clear inputs
   if (proofImageInput) proofImageInput.value = '';
+  if (certificateImageInput) certificateImageInput.value = '';
   if (expenseAmount) expenseAmount.value = '';
   if (expenseDate) expenseDate.value = '';
   if (expenseNote) expenseNote.value = '';
@@ -247,6 +249,20 @@ function openModal(id, data) {
     imageGallery.innerHTML = '<p style="color:#999; font-size:0.85rem; font-style:italic;">No photos uploaded yet.</p>';
   }
 
+  // 4. RENDER CERTIFICATES
+  certificateGallery.innerHTML = '';
+  if (data.certificates && Array.isArray(data.certificates) && data.certificates.length > 0) {
+    data.certificates.forEach(cert => {
+      const img = document.createElement('img');
+      img.src = cert.url;
+      img.title = `Certificate uploaded on ${new Date(cert.uploadedAt).toLocaleDateString()} - Click to view full size`;
+      img.onclick = () => window.open(cert.url, '_blank');
+      certificateGallery.appendChild(img);
+    });
+  } else {
+    certificateGallery.innerHTML = '<p style="color:#999; font-size:0.85rem; font-style:italic;">No certificate uploaded yet.</p>';
+  }
+
   // 4. RENDER EXPENSES TABLE
   renderExpenses(Array.isArray(data.expenses) ? data.expenses : []);
   
@@ -267,7 +283,7 @@ if (modal) {
   });
 }
 
-// --- MAIN UPDATE LOGIC ---
+// --- MAIN UPDATE LOGIC (Injects Name & Address to DB) ---
 updateProjectBtn.addEventListener('click', async () => {
   if (!currentProjectId) return;
 
@@ -284,25 +300,45 @@ updateProjectBtn.addEventListener('click', async () => {
   const notes = projectNotes ? projectNotes.value : '';
 
   try {
-    // 2. Upload Image if Selected
+    // 2. Upload Images if Selected
     let uploadedImageUrl = null;
+    let uploadedCertificateUrl = null;
+
+    // Upload proof image if selected
     if (proofImageInput.files.length > 0) {
       updateProjectBtn.textContent = 'Uploading Image...';
       const file = proofImageInput.files[0];
       uploadedImageUrl = await uploadImageToCloudinary(file);
-      
+
       if (!uploadedImageUrl) {
         throw new Error('Image upload failed');
       }
     }
 
+    // Upload certificate if status is finished and certificate is selected
+    if (status === 'finished') {
+      if (!certificateImageInput.files.length > 0) {
+        throw new Error('Certificate of Completion is required when marking project as finished');
+      }
+
+      updateProjectBtn.textContent = 'Uploading Certificate...';
+      const certificateFile = certificateImageInput.files[0];
+      uploadedCertificateUrl = await uploadImageToCloudinary(certificateFile);
+
+      if (!uploadedCertificateUrl) {
+        throw new Error('Certificate upload failed');
+      }
+    }
+
     // 3. Prepare Payload
+    // Automatically inject CONTRACTOR NAME & ADDRESS into the database
     const payload = {
       projectStatus: status,
       progress: progress,
       amountSpent: spent,
       notes: notes,
-      updatedAt: serverTimestamp()
+      updatedAt: serverTimestamp(),
+      ...DEFAULT_CONTRACTOR // <--- INJECTS ONLY NAME AND ADDRESS
     };
 
     // Add Image to Array if uploaded
@@ -310,10 +346,18 @@ updateProjectBtn.addEventListener('click', async () => {
       payload.proofImages = arrayUnion(uploadedImageUrl);
     }
 
+    // Add Certificate to Array if uploaded
+    if (uploadedCertificateUrl) {
+      payload.certificates = arrayUnion({
+        url: uploadedCertificateUrl,
+        uploadedAt: new Date().toISOString(),
+        type: 'completion_certificate'
+      });
+    }
+
     // Add Financial Record if entered
     const hasExpense = newExpenseAmount > 0 || (expenseDate && expenseDate.value) || (expenseNote && expenseNote.value.trim());
     if (hasExpense && newExpenseAmount > 0) {
-      // Enforce description
       if (!expenseNote.value.trim()) {
         throw new Error('Please describe this disbursement (e.g., 1st Billing).');
       }

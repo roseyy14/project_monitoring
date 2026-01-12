@@ -66,13 +66,57 @@
   <main class="auth-wrapper">
     <section class="auth-card" aria-labelledby="admin-title">
       <nav class="brgy-navbar" aria-label="Filter navigation">
-        <div class="left">
-          <strong>All Requests</strong>
-          <div class="filters" role="tablist" aria-label="Filter requests">
-            <button class="brgy-chip active" data-filter="all" role="tab" aria-selected="true">All</button>
-            <button class="brgy-chip" data-filter="pending" role="tab">Pending</button>
-            <button class="brgy-chip" data-filter="approved" role="tab">Approved</button>
-            <button class="brgy-chip" data-filter="rejected" role="tab">Rejected</button>
+        <div class="left" style="width: 100%;">
+          <strong style="display: block; margin-bottom: 12px;">All Requests</strong>
+          <div class="filters" role="tablist" aria-label="Filter requests" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <!-- First Row: Date Range and Apply Button -->
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+            <div class="control-group" style="margin: 0; min-width: 150px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">From Date</label>
+              <input type="date" id="dateFrom" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; transition: border-color 0.2s;" />
+            </div>
+            <div class="control-group" style="margin: 0; min-width: 150px;">
+              <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">To Date</label>
+              <input type="date" id="dateTo" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; transition: border-color 0.2s;" />
+            </div>
+              <button class="button" id="applyFiltersBtn" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; height: fit-content;">Apply</button>
+              <button class="button" id="exportPdfBtn" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; height: fit-content;">Export PDF</button>
+            </div>
+            <!-- Second Row: Other Filters and Clear Button -->
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+              <div class="control-group" style="margin: 0; min-width: 150px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Status</label>
+                <select id="filterStatus" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              <div class="control-group" style="margin: 0; min-width: 150px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Location</label>
+                <select id="filterLocation" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                  <option value="all">All Locations</option>
+                </select>
+              </div>
+              <div class="control-group" style="margin: 0; min-width: 150px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Budget Range</label>
+                <select id="filterBudget" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                  <option value="all">Any Amount</option>
+                  <option value="small">Small (< ₱50k)</option>
+                  <option value="medium">Medium (₱50k - ₱500k)</option>
+                  <option value="large">Large (> ₱500k)</option>
+                </select>
+              </div>
+              <div class="control-group" style="margin: 0; min-width: 180px;">
+                <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Sort By</label>
+                <select id="sortBy" style="width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; background: white; cursor: pointer;">
+                  <option value="date-desc">Date (Newest First)</option>
+                  <option value="date-asc">Date (Oldest First)</option>
+                </select>
+              </div>
+              <button class="button" id="clearFiltersBtn" style="padding: 8px 16px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background 0.2s; white-space: nowrap; height: fit-content;">Clear</button>
+            </div>
           </div>
         </div>
       </nav>
@@ -88,6 +132,7 @@
                 <th>Status</th>
                 <th>Budget</th>
                 <th>Submitted By</th>
+                <th>Reason</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -96,54 +141,6 @@
         </div>
       </section>
       <section id="reportsSection" class="reports-section" style="display:none; margin-top:32px;">
-        <div class="report-controls-wrapper">
-          <div class="report-controls">
-            <div class="control-group">
-              <label>Year</label>
-              <select id="filterYear">
-                <option value="all">All Years</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label>Month</label>
-              <select id="filterMonth">
-                <option value="all">All Months</option>
-                <option value="0">January</option>
-                <option value="1">February</option>
-                <option value="2">March</option>
-                <option value="3">April</option>
-                <option value="4">May</option>
-                <option value="5">June</option>
-                <option value="6">July</option>
-                <option value="7">August</option>
-                <option value="8">September</option>
-                <option value="9">October</option>
-                <option value="10">November</option>
-                <option value="11">December</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label>Location</label>
-              <select id="filterLocation">
-                <option value="all">All Barangays</option>
-              </select>
-            </div>
-
-            <div class="control-group">
-              <label>Budget Range</label>
-              <select id="filterBudget">
-                <option value="all">Any Amount</option>
-                <option value="small">Small (< ₱50k)</option>
-                <option value="medium">Medium (₱50k - ₱500k)</option>
-                <option value="large">Large (> ₱500k)</option>
-              </select>
-            </div>
-
-            <button id="resetFiltersBtn" class="button">Reset</button>
-          </div>
-        </div>
 
         <h2>Project Reports</h2>
         <div class="charts-grid">
@@ -206,8 +203,31 @@
           </div>
         </div>
       </div>
+      <div id="declineModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="declineModalTitle">
+          <div class="modal-header">
+            <h3 id="declineModalTitle">Decline Request</h3>
+            <button class="modal-close" id="declineModalCloseBtn" type="button">Close</button>
+          </div>
+          <div class="modal-body">
+            <form id="declineForm" style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="form-group full-width">
+                <label for="declineReason">Reason for Decline <span style="color: #ef4444;">*</span></label>
+                <textarea id="declineReason" name="declineReason" rows="4" placeholder="Please provide a reason for declining this request..." required style="width: 100%; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
+                <small style="font-size: 0.75rem; color: #666;">This reason will be visible to the barangay official who submitted the request.</small>
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button type="button" id="declineCancelBtn" class="button">Cancel</button>
+                <button type="submit" id="declineSubmitBtn" class="button" style="background-color: #ef4444; color: white;">Decline Request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="./scripts/core/firebase.js"></script>
   <script type="module" src="./scripts/core/role-guard.js"></script>
   <script type="module" src="./scripts/pages/admin.js"></script>

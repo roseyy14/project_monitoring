@@ -37,7 +37,7 @@ body.barangay-page .auth-wrapper {
 }
 
 body.barangay-page .auth-card {
-  max-width: 900px;
+  max-width: 80%;
   width: 100%;
   margin: 24px auto;
   background: var(--panel);
@@ -45,6 +45,7 @@ body.barangay-page .auth-card {
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow-x: hidden; /* Prevent horizontal overflow */
 }
 
 /* ===================================================
@@ -542,6 +543,7 @@ body.barangay-page .subtext {
   body.barangay-page .auth-card {
     margin: 16px;
     padding: 20px;
+    overflow-x: auto; /* Allow horizontal scroll on mobile if needed */
   }
 
   .brgy-form-grid {
@@ -572,4 +574,37 @@ body.barangay-page .subtext {
     padding-left: 0;
     font-size: 1rem;
   }
+}
+
+/* Notification dot for status updates */
+.notification-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #dc3545;
+  border-radius: 50%;
+  margin-right: 8px;
+  margin-left: 4px;
+  vertical-align: middle;
+  box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 4px rgba(220, 53, 69, 0.3);
+  }
+}
+
+/* Table container for proper overflow handling */
+.requests-section > div {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }

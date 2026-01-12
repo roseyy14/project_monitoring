@@ -1,9 +1,27 @@
 import { protectPage } from '../core/role-guard.js';
 import { auth, db } from '../core/firebase.js';
 import { onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { query, where, orderBy, onSnapshot, collection } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { query, where, orderBy, onSnapshot, collection, doc, updateDoc, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getCurrentUserRole, formatRequestDataForRole, escapeHtml } from '../core/role-utils.js';
 
 protectPage(['barangay_official', 'barangay official', 'baranggay official', 'baranggay_official']);
+
+// Notification system for status updates (stored in database)
+const markRequestAsSeen = async (requestId) => {
+  try {
+    const requestRef = doc(db, 'requests', requestId);
+    await updateDoc(requestRef, {
+      seenBy: arrayUnion(currentUser.uid)
+    });
+  } catch (error) {
+    console.error('Error marking request as seen:', error);
+  }
+};
+
+const hasSeenRequest = (data) => {
+  if (!data.seenBy || !Array.isArray(data.seenBy)) return false;
+  return data.seenBy.includes(currentUser.uid);
+};
 
 const signOutBtn = document.getElementById('signOutBtn');
 const requestsGrid = document.getElementById('requestsGrid');
@@ -27,7 +45,7 @@ function renderRequests(docs) {
   if (!docs.length) {
     const emptyRow = document.createElement('tr');
     const emptyCell = document.createElement('td');
-    emptyCell.colSpan = 6;
+    emptyCell.colSpan = 7;
     emptyCell.textContent = 'No requests yet.';
     emptyCell.style.color = '#667085';
     emptyCell.style.textAlign = 'center';
@@ -41,25 +59,42 @@ function renderRequests(docs) {
     const statusClass = status === 'approved' ? 'status-approved' : status === 'rejected' ? 'status-rejected' : 'status-pending';
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', d.id);
+
+    // Check if this request has been updated and not seen yet
+    const hasUpdate = (status === 'approved' || status === 'rejected') && !hasSeenRequest(data);
+    const notificationDot = hasUpdate ? '<span class="notification-dot" title="New status update"></span>' : '';
+
+    const reasonText = (status === 'rejected' && data.reasonForDecline) ? escapeHtml(data.reasonForDecline) : '—';
     tr.innerHTML = `
-      <td>${escapeHtml(data.title || 'Untitled')}</td>
+      <td>${notificationDot}${escapeHtml(data.title || 'Untitled')}</td>
       <td>${escapeHtml(data.category || 'n/a')}</td>
       <td>${escapeHtml(data.location || 'n/a')}</td>
       <td><span class="status-pill ${statusClass}">${status}</span></td>
       <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(data.details || '')}</td>
+      <td style="max-width: 200px; font-size: 0.85rem; color: ${status === 'rejected' ? '#dc2626' : '#666'};" title="${reasonText}">${reasonText.length > 50 ? reasonText.substring(0, 50) + '...' : reasonText}</td>
       <td><button class="button info" data-action="see-info">See Info</button></td>
     `;
     requestsGrid.appendChild(tr);
   });
 
   requestsGrid.querySelectorAll('[data-action="see-info"]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const tr = btn.closest('tr');
       const id = tr.getAttribute('data-id');
+
+      // Mark as seen in database and remove notification dot immediately
+      const notificationDot = tr.querySelector('.notification-dot');
+      if (notificationDot) {
+        notificationDot.remove();
+      }
+
+      // Mark as seen in database (async, don't await to avoid blocking UI)
+      markRequestAsSeen(id);
+
       const snap = docs.find((x) => x.id === id);
       const data = snap ? snap.data() : {};
-      openModal(data);
+      openModal(data, id);
     });
   });
 }
@@ -98,78 +133,22 @@ filterChips.forEach((chip) => {
   });
 });
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"]+/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[s]));
-}
 
 signOutBtn.addEventListener('click', async () => {
   await signOut(auth);
   window.location.href = 'index.html';
 });
 
-function openModal(data) {
+async function openModal(data, requestId) {
   if (!modal || !modalContent) return;
-  const status = (data.isApproved === true)
-    ? 'approved'
-    : (data.isApproved === false && data.status === 'rejected')
-      ? 'rejected'
-      : 'pending';
 
-  const budgetYear = data.budgetYear || '—';
-  const projectCost = data.budget != null
-    ? '₱ ' + Number(data.budget).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
-    : '—';
+  const role = await getCurrentUserRole();
+  modalContent.innerHTML = formatRequestDataForRole(data, role);
 
-  // ✅ Clean 2-column structure (each label/value in its own row)
-  modalContent.innerHTML = `
-    <div class="detail-row">
-      <div class="detail-label">Title</div>
-      <div class="detail-value">${escapeHtml(data.title || '')}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Category</div>
-      <div class="detail-value">${escapeHtml(data.category || '')}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Location</div>
-      <div class="detail-value">${escapeHtml(data.location || '')}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Urgency</div>
-      <div class="detail-value">${escapeHtml(data.urgency || '')}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Status</div>
-      <div class="detail-value">${escapeHtml(status)}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Target Budget Year</div>
-      <div class="detail-value">${escapeHtml(String(budgetYear))}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Project Cost</div>
-      <div class="detail-value">${projectCost}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Details</div>
-      <div class="detail-value">${escapeHtml(data.details || '')}</div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-label">Contact</div>
-      <div class="detail-value">${escapeHtml(data.contact || '—')}</div>
-    </div>
-  `;
+  // Mark this request as seen when modal opens
+  if (requestId) {
+    markRequestAsSeen(requestId);
+  }
 
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');

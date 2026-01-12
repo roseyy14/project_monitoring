@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isSelf(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isSelf(uid);
+    }
+
+    match /requests/{docId} {
+      // Allow public read access for the dashboard
+      allow read: if true;
+
+      allow create: if isSignedIn();
+
+      // Only admins can update any field
+      allow update: if isSignedIn() && userRole() == 'admin'
+        // OR engineers can update ONLY projectStatus, progress, updatedAt
+        || (isSignedIn() && userRole() == 'engineer'
+            && !(request.resource.data.diff(resource.data).affectedKeys().hasAny([
+                  'isApproved', 'status', 'createdBy', 'title', 'category', 'location', 'urgency', 'budget', 'details', 'contact'
+                ]))
+            && request.resource.data.keys().hasAll(['projectStatus', 'progress', 'updatedAt'])
+        )
+        // OR signed-in users can update ONLY the seenBy field (for notifications)
+        || (isSignedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy'])
+        );
+
+      allow delete: if false;
+    }
+  }
+}

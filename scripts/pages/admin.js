@@ -2,6 +2,7 @@ import { protectPage } from '../core/role-guard.js';
 import { auth, db } from '../core/firebase.js';
 import { signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { getCurrentUserRole, formatRequestDataForRole, escapeHtml } from '../core/role-utils.js';
 import "https://cdn.jsdelivr.net/npm/chart.js";
 
 // --- 1. SECURITY & SETUP ---
@@ -18,13 +19,21 @@ const filterNav = document.querySelector('.brgy-navbar');
 
 // Request Table Elements
 const requestsGrid = document.getElementById('requestsGrid');
-const filterChips = Array.from(document.querySelectorAll('.brgy-chip[data-filter]'));
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+const tableFilterStatus = document.getElementById('filterStatus');
+const tableFilterLocation = document.getElementById('filterLocation');
+const tableFilterBudget = document.getElementById('filterBudget');
+const tableSortBy = document.getElementById('sortBy');
+const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+const exportPdfBtn = document.getElementById('exportPdfBtn');
 
 // Report Filter Elements
 const filterYear = document.getElementById('filterYear');
 const filterMonth = document.getElementById('filterMonth');
-const filterLocation = document.getElementById('filterLocation');
-const filterBudget = document.getElementById('filterBudget');
+const reportFilterLocation = document.getElementById('reportFilterLocation');
+const reportFilterBudget = document.getElementById('reportFilterBudget');
 const resetFiltersBtn = document.getElementById('resetFiltersBtn');
 
 // Modal Elements
@@ -35,19 +44,31 @@ const projectsModal = document.getElementById('projectsModal');
 const projectsModalCloseBtn = document.getElementById('projectsModalCloseBtn');
 const projectsModalTitle = document.getElementById('projectsModalTitle');
 const projectsGrid = document.getElementById('projectsGrid');
+const declineModal = document.getElementById('declineModal');
+const declineModalCloseBtn = document.getElementById('declineModalCloseBtn');
+const declineForm = document.getElementById('declineForm');
+const declineReasonInput = document.getElementById('declineReason');
+const declineCancelBtn = document.getElementById('declineCancelBtn');
+let currentDeclineRequestId = null;
 
 // State Variables
 let tableUnsubscribe = null;
 let reportsUnsubscribe = null;
 let allReportDocs = []; // Stores raw data for reports
+let allTableDocs = []; // Stores all table data for filtering
+let filteredTableDocs = []; // Stores currently filtered data for PDF export
+let currentFilters = {
+  dateFrom: null,
+  dateTo: null,
+  status: 'all',
+  location: 'all',
+  budget: 'all',
+  sortBy: 'date-desc'
+};
 
 // Formatters
 const pesoFormatter = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 2 });
 const pesoCompact = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 });
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"]+/g, (s) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
-}
 
 // --- 2. AUTHENTICATION ---
 onAuthStateChanged(auth, (user) => {
@@ -92,6 +113,8 @@ function subscribeToRequestsTable() {
   const q = query(base, orderBy('createdAt', 'desc'));
   
   tableUnsubscribe = onSnapshot(q, (snap) => {
+    allTableDocs = snap.docs;
+    populateLocationFilter(snap.docs);
     applyTableFilterAndRender(snap.docs);
   });
 }
@@ -101,7 +124,7 @@ function renderRequestsTable(docs) {
   if (!docs.length) {
     const emptyRow = document.createElement('tr');
     const emptyCell = document.createElement('td');
-    emptyCell.colSpan = 7;
+    emptyCell.colSpan = 8;
     emptyCell.textContent = 'No requests found.';
     emptyCell.style.color = '#667085';
     emptyCell.style.textAlign = 'center';
@@ -118,6 +141,7 @@ function renderRequestsTable(docs) {
     
     const tr = document.createElement('tr');
     tr.setAttribute('data-id', d.id);
+    const reasonText = (status === 'rejected' && data.reasonForDecline) ? escapeHtml(data.reasonForDecline) : '—';
     tr.innerHTML = `
       <td>${escapeHtml(data.title || 'Untitled')}</td>
       <td>${escapeHtml(data.category || 'n/a')}</td>
@@ -125,6 +149,7 @@ function renderRequestsTable(docs) {
       <td><span class="status-pill ${statusClass}">${status}</span></td>
       <td>${data.budget != null ? '₱ ' + escapeHtml(String(data.budget)) : '—'}</td>
       <td>${escapeHtml(createdBy.displayName || createdBy.email || createdBy.uid || 'Unknown')}</td>
+      <td style="max-width: 200px; font-size: 0.85rem; color: ${status === 'rejected' ? '#dc2626' : '#666'};" title="${reasonText}">${reasonText.length > 50 ? reasonText.substring(0, 50) + '...' : reasonText}</td>
       <td>
         <div class="admin-actions" data-id="${d.id}">
           <button class="button info" data-action="see-info">See Info</button>
@@ -160,14 +185,14 @@ function renderRequestsTable(docs) {
       });
     }
     if (denyBtn) {
-      denyBtn.addEventListener('click', async (e) => {
+      denyBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if(confirm('Are you sure you want to reject this request?')) {
-          await updateDoc(doc(db, 'requests', id), {
-            isApproved: false,
-            status: 'rejected',
-            updatedAt: serverTimestamp()
-          });
+        currentDeclineRequestId = id;
+        if (declineReasonInput) declineReasonInput.value = '';
+        if (declineModal) {
+          declineModal.classList.add('open');
+          declineModal.setAttribute('aria-hidden', 'false');
+          if (declineReasonInput) declineReasonInput.focus();
         }
       });
     }
@@ -192,27 +217,342 @@ function renderRequestsTable(docs) {
 }
 
 function applyTableFilterAndRender(docs) {
-  const active = document.querySelector('.brgy-chip[data-filter].active');
-  const filter = active ? active.getAttribute('data-filter') : 'all';
+  let filtered = [...docs];
   
-  const filtered = docs.filter((d) => {
-    const data = d.data();
-    const status = (data.isApproved === true) ? 'approved' : (data.isApproved === false && data.status === 'rejected') ? 'rejected' : 'pending';
-    if (filter === 'all') return true;
-    return status === filter;
+  // Apply date range filter
+  if (currentFilters.dateFrom || currentFilters.dateTo) {
+    filtered = filtered.filter((d) => {
+      const data = d.data();
+      if (!data.createdAt) return false;
+      
+      const docDate = data.createdAt.toDate();
+      const docDateOnly = new Date(docDate.getFullYear(), docDate.getMonth(), docDate.getDate());
+      
+      if (currentFilters.dateFrom) {
+        const fromDate = new Date(currentFilters.dateFrom);
+        if (docDateOnly < fromDate) return false;
+      }
+      
+      if (currentFilters.dateTo) {
+        const toDate = new Date(currentFilters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (docDateOnly > toDate) return false;
+      }
+      
+      return true;
+    });
+  }
+  
+  // Apply status filter
+  if (currentFilters.status !== 'all') {
+    filtered = filtered.filter((d) => {
+      const data = d.data();
+      const status = (data.isApproved === true) ? 'approved' : (data.isApproved === false && data.status === 'rejected') ? 'rejected' : 'pending';
+      return status === currentFilters.status;
+    });
+  }
+  
+  // Apply location filter
+  if (currentFilters.location !== 'all') {
+    filtered = filtered.filter((d) => {
+      const data = d.data();
+      return data.location === currentFilters.location;
+    });
+  }
+  
+  // Apply budget filter
+  if (currentFilters.budget !== 'all') {
+    filtered = filtered.filter((d) => {
+      const data = d.data();
+      const budget = Number(data.budget) || 0;
+      if (currentFilters.budget === 'small' && budget >= 50000) return false;
+      if (currentFilters.budget === 'medium' && (budget < 50000 || budget > 500000)) return false;
+      if (currentFilters.budget === 'large' && budget <= 500000) return false;
+      return true;
+    });
+  }
+  
+  // Apply sorting
+  filtered.sort((a, b) => {
+    const dataA = a.data();
+    const dataB = b.data();
+    
+    switch (currentFilters.sortBy) {
+      case 'date-desc':
+        const dateA = dataA.createdAt ? dataA.createdAt.toDate().getTime() : 0;
+        const dateB = dataB.createdAt ? dataB.createdAt.toDate().getTime() : 0;
+        return dateB - dateA;
+      
+      case 'date-asc':
+        const dateA2 = dataA.createdAt ? dataA.createdAt.toDate().getTime() : 0;
+        const dateB2 = dataB.createdAt ? dataB.createdAt.toDate().getTime() : 0;
+        return dateA2 - dateB2;
+      
+      case 'title-asc':
+        return (dataA.title || '').localeCompare(dataB.title || '');
+      
+      case 'title-desc':
+        return (dataB.title || '').localeCompare(dataA.title || '');
+      
+      case 'budget-desc':
+        return (Number(dataB.budget) || 0) - (Number(dataA.budget) || 0);
+      
+      case 'budget-asc':
+        return (Number(dataA.budget) || 0) - (Number(dataB.budget) || 0);
+      
+      case 'status-asc':
+        const statusA = (dataA.isApproved === true) ? 'approved' : (dataA.isApproved === false && dataA.status === 'rejected') ? 'rejected' : 'pending';
+        const statusB = (dataB.isApproved === true) ? 'approved' : (dataB.isApproved === false && dataB.status === 'rejected') ? 'rejected' : 'pending';
+        return statusA.localeCompare(statusB);
+      
+      case 'status-desc':
+        const statusA2 = (dataA.isApproved === true) ? 'approved' : (dataA.isApproved === false && dataA.status === 'rejected') ? 'rejected' : 'pending';
+        const statusB2 = (dataB.isApproved === true) ? 'approved' : (dataB.isApproved === false && dataB.status === 'rejected') ? 'rejected' : 'pending';
+        return statusB2.localeCompare(statusA2);
+      
+      default:
+        return 0;
+    }
   });
+  
+  // Store filtered data for PDF export
+  filteredTableDocs = filtered;
   renderRequestsTable(filtered);
 }
 
-// Table Filter Chips
-filterChips.forEach((chip) => {
-  chip.addEventListener('click', () => {
-    filterChips.forEach((c) => c.classList.remove('active'));
-    chip.classList.add('active');
-    // Refresh table with existing data would be better, but re-triggering subscription is safe enough here
-    if (tableUnsubscribe) { tableUnsubscribe(); subscribeToRequestsTable(); }
+// --- PDF EXPORT FUNCTIONALITY ---
+function exportToPDF() {
+  if (!filteredTableDocs || filteredTableDocs.length === 0) {
+    alert('No data to export. Please apply filters and try again.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('l', 'mm', 'a4');
+
+  // Title
+  doc.setFontSize(18);
+  doc.setFont(undefined, 'bold');
+  doc.text('Admin Dashboard - Requests Report', 14, 15);
+  
+  // Date Generated
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'normal');
+  const currentDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
+  doc.text(`Generated: ${currentDate}`, 14, 22);
+
+  // Filter Information
+  let filterInfo = 'Applied Filters: ';
+  const filterParts = [];
+  
+  if (currentFilters.dateFrom) filterParts.push(`From: ${currentFilters.dateFrom}`);
+  if (currentFilters.dateTo) filterParts.push(`To: ${currentFilters.dateTo}`);
+  if (currentFilters.status !== 'all') filterParts.push(`Status: ${currentFilters.status}`);
+  if (currentFilters.location !== 'all') filterParts.push(`Location: ${currentFilters.location}`);
+  if (currentFilters.budget !== 'all') filterParts.push(`Budget: ${currentFilters.budget}`);
+  
+  filterInfo += filterParts.length > 0 ? filterParts.join(' | ') : 'None';
+  
+  doc.setFontSize(9);
+  doc.text(filterInfo, 14, 28);
+
+  // Prepare table data
+  const tableData = filteredTableDocs.map(d => {
+    const data = d.data();
+    const status = (data.isApproved === true) ? 'approved' : 
+                   (data.isApproved === false && data.status === 'rejected') ? 'rejected' : 'pending';
+    const createdBy = data.createdBy || {};
+    const submittedBy = createdBy.displayName || createdBy.email || createdBy.uid || 'Unknown';
+    const reasonText = (status === 'rejected' && data.reasonForDecline) ? data.reasonForDecline : '—';
+    
+    return [
+      data.title || 'Untitled',
+      data.category || 'n/a',
+      data.location || 'n/a',
+      status,
+      data.budget != null ? pesoCompact.format(data.budget) : '—',
+      submittedBy,
+      reasonText.length > 50 ? reasonText.substring(0, 50) + '...' : reasonText
+    ];
+  });
+
+  // Generate table
+  doc.autoTable({
+    head: [['Title', 'Category', 'Location', 'Status', 'Budget', 'Submitted By', 'Reason']],
+    body: tableData,
+    startY: 35,
+    styles: { 
+      fontSize: 8,
+      cellPadding: 3,
+      overflow: 'linebreak'
+    },
+    headStyles: { 
+      fillColor: [59, 130, 246],
+      textColor: 255,
+      fontStyle: 'bold',
+      halign: 'left'
+    },
+    alternateRowStyles: {
+      fillColor: [249, 250, 251]
+    },
+    columnStyles: {
+      0: { cellWidth: 45 }, // Title
+      1: { cellWidth: 28 }, // Category
+      2: { cellWidth: 35 }, // Location
+      3: { cellWidth: 22 }, // Status
+      4: { cellWidth: 28 }, // Budget
+      5: { cellWidth: 35 }, // Submitted By
+      6: { cellWidth: 45 }  // Reason
+    },
+    margin: { top: 35, left: 14, right: 14 },
+    didDrawPage: function (data) {
+      const pageCount = doc.internal.getNumberOfPages();
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+      doc.text(
+        `Page ${data.pageNumber} of ${pageCount}`,
+        data.settings.margin.left,
+        pageHeight - 10
+      );
+    }
+  });
+
+  // Summary statistics
+  const finalY = doc.lastAutoTable.finalY + 10;
+  
+  doc.setFontSize(10);
+  doc.setFont(undefined, 'bold');
+  doc.text('Summary Statistics:', 14, finalY);
+  
+  doc.setFont(undefined, 'normal');
+  doc.setFontSize(9);
+  
+  const totalRequests = filteredTableDocs.length;
+  const totalBudget = filteredTableDocs.reduce((sum, d) => {
+    return sum + (Number(d.data().budget) || 0);
+  }, 0);
+  
+  const statusCounts = { approved: 0, pending: 0, rejected: 0 };
+  filteredTableDocs.forEach(d => {
+    const data = d.data();
+    const status = (data.isApproved === true) ? 'approved' : 
+                   (data.isApproved === false && data.status === 'rejected') ? 'rejected' : 'pending';
+    statusCounts[status]++;
+  });
+
+  doc.text(`Total Requests: ${totalRequests}`, 14, finalY + 6);
+  doc.text(`Total Budget: ${pesoCompact.format(totalBudget)}`, 14, finalY + 12);
+  doc.text(`Approved: ${statusCounts.approved} | Pending: ${statusCounts.pending} | Rejected: ${statusCounts.rejected}`, 14, finalY + 18);
+
+  const filename = `admin_requests_report_${new Date().toISOString().split('T')[0]}.pdf`;
+  doc.save(filename);
+}
+
+// Populate location filter dynamically
+function populateLocationFilter(docs) {
+  if (!tableFilterLocation) return;
+  
+  const locations = new Set();
+  docs.forEach(d => {
+    const data = d.data();
+    if (data.location) {
+      locations.add(data.location.trim());
+    }
+  });
+  
+  const currentVal = tableFilterLocation.value;
+  while (tableFilterLocation.options.length > 1) {
+    tableFilterLocation.remove(1);
+  }
+  
+  Array.from(locations).sort().forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc;
+    opt.textContent = loc;
+    tableFilterLocation.appendChild(opt);
+  });
+  
+  if (Array.from(locations).includes(currentVal)) {
+    tableFilterLocation.value = currentVal;
+  }
+}
+
+// Filter Event Listeners
+if (applyFiltersBtn) {
+  applyFiltersBtn.addEventListener('click', () => {
+    const from = dateFrom ? dateFrom.value : null;
+    const to = dateTo ? dateTo.value : null;
+    
+    if (from && to && new Date(from) > new Date(to)) {
+      alert('From date must be before or equal to To date.');
+      return;
+    }
+    
+    currentFilters.dateFrom = from;
+    currentFilters.dateTo = to;
+    currentFilters.status = tableFilterStatus ? tableFilterStatus.value : 'all';
+    currentFilters.location = tableFilterLocation ? tableFilterLocation.value : 'all';
+    currentFilters.budget = tableFilterBudget ? tableFilterBudget.value : 'all';
+    currentFilters.sortBy = tableSortBy ? tableSortBy.value : 'date-desc';
+    
+    applyTableFilterAndRender(allTableDocs);
+  });
+}
+
+if (clearFiltersBtn) {
+  clearFiltersBtn.addEventListener('click', () => {
+    if (dateFrom) dateFrom.value = '';
+    if (dateTo) dateTo.value = '';
+    if (tableFilterStatus) tableFilterStatus.value = 'all';
+    if (tableFilterLocation) tableFilterLocation.value = 'all';
+    if (tableFilterBudget) tableFilterBudget.value = 'all';
+    if (tableSortBy) tableSortBy.value = 'date-desc';
+    
+    currentFilters = {
+      dateFrom: null,
+      dateTo: null,
+      status: 'all',
+      location: 'all',
+      budget: 'all',
+      sortBy: 'date-desc'
+    };
+    
+    applyTableFilterAndRender(allTableDocs);
+  });
+}
+
+// Auto-apply on filter changes
+if (tableFilterStatus) tableFilterStatus.addEventListener('change', () => {
+  currentFilters.status = tableFilterStatus.value;
+  applyTableFilterAndRender(allTableDocs);
 });
+
+if (tableFilterLocation) tableFilterLocation.addEventListener('change', () => {
+  currentFilters.location = tableFilterLocation.value;
+  applyTableFilterAndRender(allTableDocs);
+});
+
+if (tableFilterBudget) tableFilterBudget.addEventListener('change', () => {
+  currentFilters.budget = tableFilterBudget.value;
+  applyTableFilterAndRender(allTableDocs);
+});
+
+if (tableSortBy) tableSortBy.addEventListener('change', () => {
+  currentFilters.sortBy = tableSortBy.value;
+  applyTableFilterAndRender(allTableDocs);
+});
+
+// Export PDF Button
+if (exportPdfBtn) {
+  exportPdfBtn.addEventListener('click', exportToPDF);
+}
 
 
 // --- 5. REPORTS & CHARTS LOGIC (With Filters) ---
@@ -243,37 +583,45 @@ function populateDynamicFilters(docs) {
   });
 
   // Fill Year Select
-  const currentYearVal = filterYear.value;
+  const currentYearVal = filterYear ? filterYear.value : null;
   // Keep "All" as first option (index 0), remove others
-  while (filterYear.options.length > 1) { filterYear.remove(1); }
+  if (filterYear && filterYear.options) {
+    while (filterYear.options.length > 1) { filterYear.remove(1); }
+  }
   
-  Array.from(years).sort().reverse().forEach(y => {
-    const opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    filterYear.appendChild(opt);
-  });
+  if (filterYear) {
+    Array.from(years).sort().reverse().forEach(y => {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      filterYear.appendChild(opt);
+    });
+  }
   // Restore selection if valid
   if (Array.from(years).map(String).includes(currentYearVal)) filterYear.value = currentYearVal;
 
   // Fill Location Select
-  const currentLocVal = filterLocation.value;
-  while (filterLocation.options.length > 1) { filterLocation.remove(1); }
+  const currentLocVal = reportFilterLocation ? reportFilterLocation.value : null;
+  if (reportFilterLocation && reportFilterLocation.options) {
+    while (reportFilterLocation.options.length > 1) { reportFilterLocation.remove(1); }
+  }
   
-  Array.from(locations).sort().forEach(loc => {
-    const opt = document.createElement('option');
-    opt.value = loc;
-    opt.textContent = loc;
-    filterLocation.appendChild(opt);
-  });
-  if (Array.from(locations).includes(currentLocVal)) filterLocation.value = currentLocVal;
+  if (reportFilterLocation) {
+    Array.from(locations).sort().forEach(loc => {
+      const opt = document.createElement('option');
+      opt.value = loc;
+      opt.textContent = loc;
+      reportFilterLocation.appendChild(opt);
+    });
+  }
+  if (Array.from(locations).includes(currentLocVal)) reportFilterLocation.value = currentLocVal;
 }
 
 function filterAndRenderReports() {
-  const selectedYear = filterYear.value;
-  const selectedMonth = filterMonth.value;
-  const selectedLoc = filterLocation.value;
-  const selectedBudget = filterBudget.value;
+  const selectedYear = filterYear ? filterYear.value : 'all';
+  const selectedMonth = filterMonth ? filterMonth.value : 'all';
+  const selectedLoc = reportFilterLocation ? reportFilterLocation.value : 'all';
+  const selectedBudget = reportFilterBudget ? reportFilterBudget.value : 'all';
 
   const filteredDocs = allReportDocs.filter(d => {
     const data = d.data();
@@ -301,7 +649,7 @@ function filterAndRenderReports() {
 }
 
 // Report Filter Listeners
-[filterYear, filterMonth, filterLocation, filterBudget].forEach(el => {
+[filterYear, filterMonth, reportFilterLocation, reportFilterBudget].forEach(el => {
   if(el) el.addEventListener('change', filterAndRenderReports);
 });
 
@@ -309,8 +657,8 @@ if(resetFiltersBtn) {
   resetFiltersBtn.addEventListener('click', () => {
     filterYear.value = 'all';
     filterMonth.value = 'all';
-    filterLocation.value = 'all';
-    filterBudget.value = 'all';
+    reportFilterLocation.value = 'all';
+    reportFilterBudget.value = 'all';
     filterAndRenderReports();
   });
 }
@@ -472,126 +820,10 @@ function renderCharts(docs) {
 
 // --- 6. MODALS LOGIC ---
 
-// --- Main Request Details Modal ---
-function openModal(id, data) {
-  const budget = data.budget || 0;
-  const spent = data.amountSpent || 0;
-  const financialPercentage = budget > 0 ? ((spent / budget) * 100).toFixed(1) : 0;
-
-  // Contractor Info
-  const contractorFields = [
-    data.contractorName, data.contractorAddress, data.contractDate,
-    data.contractAmount, data.contractDuration, data.intendedCompletionDate,
-    data.noticeToProceedDate, data.contractExpirationDate
-  ];
-  const hasContractorData = contractorFields.some(v => v && v !== '—');
-  
-  let contractorHTML = '';
-  if (hasContractorData) {
-    contractorHTML = `
-      <div class="modal-section-title">Contractor Details</div>
-      <div class="detail-row">
-        <div class="detail-label">Name</div>
-        <div class="detail-value">${escapeHtml(data.contractorName || '—')}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Address</div>
-        <div class="detail-value">${escapeHtml(data.contractorAddress || '—')}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Contract Date</div>
-        <div class="detail-value">${escapeHtml(data.contractDate || '—')}</div>
-      </div>
-      <div class="detail-row">
-        <div class="detail-label">Amount</div>
-        <div class="detail-value">${data.contractAmount != null ? pesoFormatter.format(data.contractAmount) : '—'}</div>
-      </div>
-    `;
-  }
-
-  // Photos
-  let imagesHtml = '';
-  if (data.proofImages && Array.isArray(data.proofImages) && data.proofImages.length > 0) {
-    imagesHtml = `<div class="image-gallery">`;
-    data.proofImages.forEach(url => {
-      imagesHtml += `<img src="${url}" onclick="window.open('${url}', '_blank')" title="Click to view full size" />`;
-    });
-    imagesHtml += `</div>`;
-  } else {
-    imagesHtml = `<div class="sub-text" style="padding: 0 0 16px 0;">No photo updates available.</div>`;
-  }
-
-  // Expenses Table
-  const expenses = Array.isArray(data.expenses) ? data.expenses : [];
-  let expenseTable = '';
-  if (expenses.length > 0) {
-    expenseTable = `
-      <div style="margin-top:8px;">
-        <table class="requests-table" style="width:100%;">
-          <thead>
-            <tr>
-              <th style="text-align:left;">Date</th>
-              <th style="text-align:left;">Particulars</th>
-              <th style="text-align:right;">Amount</th>
-            </tr>
-          </thead>
-          <tbody>`;
-    expenses.forEach(e => {
-      const dateStr = e.date ? new Date(e.date).toLocaleDateString() : '—';
-      const amtStr = e.amount ? pesoFormatter.format(e.amount) : '—';
-      expenseTable += `
-        <tr>
-          <td>${escapeHtml(dateStr)}</td>
-          <td>${escapeHtml(e.note || '—')}</td>
-          <td style="text-align:right;">${amtStr}</td>
-        </tr>`;
-    });
-    expenseTable += `</tbody></table></div>`;
-  } else {
-    expenseTable = `<div class="sub-text">No disbursements recorded yet.</div>`;
-  }
-
-  // Combine HTML
-  modalContent.innerHTML = `
-    <div class="detail-row">
-      <div class="detail-label">Title</div>
-      <div class="detail-value"><strong>${escapeHtml(data.title || '')}</strong></div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Category</div>
-      <div class="detail-value">${escapeHtml(data.category || '')}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Location</div>
-      <div class="detail-value">${escapeHtml(data.location || '')}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Budget</div>
-      <div class="detail-value">${data.budget != null ? pesoFormatter.format(data.budget) : '—'}</div>
-    </div>
-    <div class="detail-row">
-      <div class="detail-label">Details</div>
-      <div class="detail-value">${escapeHtml(data.details || '')}</div>
-    </div>
-
-    <div class="detail-row" style="background-color: #eff6ff; margin-top:12px;">
-      <div class="detail-label" style="color:#3b82f6">Physical Status</div>
-      <div class="detail-value" style="color:#3b82f6; font-weight:bold;">${data.progress || 0}% Completed</div>
-    </div>
-    <div class="detail-row" style="background-color: #fff7ed;">
-      <div class="detail-label" style="color:#f59e42">Financial Status</div>
-      <div class="detail-value" style="color:#f59e42; font-weight:bold;">${financialPercentage}% Utilized (${pesoFormatter.format(spent)})</div>
-    </div>
-
-    ${contractorHTML}
-
-    <div class="modal-section-title">Project Photos</div>
-    ${imagesHtml}
-
-    <div class="modal-section-title">Financial Accomplishment History</div>
-    ${expenseTable}
-  `;
-  
+// --- Main Request Details Modal (UPDATED to use role-based display) ---
+async function openModal(id, data) {
+  const role = await getCurrentUserRole();
+  modalContent.innerHTML = formatRequestDataForRole(data, role);
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
 }
@@ -604,6 +836,63 @@ if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeModal);
 if (modal) {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
+  });
+}
+
+// Decline Modal Logic
+function closeDeclineModal() {
+  if (declineModal) {
+    declineModal.classList.remove('open');
+    declineModal.setAttribute('aria-hidden', 'true');
+  }
+  currentDeclineRequestId = null;
+  if (declineReasonInput) declineReasonInput.value = '';
+}
+
+if (declineModalCloseBtn) declineModalCloseBtn.addEventListener('click', closeDeclineModal);
+if (declineCancelBtn) declineCancelBtn.addEventListener('click', closeDeclineModal);
+if (declineModal) {
+  declineModal.addEventListener('click', (e) => {
+    if (e.target === declineModal) closeDeclineModal();
+  });
+}
+
+if (declineForm) {
+  declineForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentDeclineRequestId) return;
+    
+    const reason = declineReasonInput ? declineReasonInput.value.trim() : '';
+    if (!reason) {
+      alert('Please provide a reason for declining this request.');
+      if (declineReasonInput) declineReasonInput.focus();
+      return;
+    }
+    
+    const submitBtn = document.getElementById('declineSubmitBtn');
+    const originalText = submitBtn ? submitBtn.textContent : 'Decline Request';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Declining...';
+    }
+    
+    try {
+      await updateDoc(doc(db, 'requests', currentDeclineRequestId), {
+        isApproved: false,
+        status: 'rejected',
+        reasonForDecline: reason,
+        updatedAt: serverTimestamp()
+      });
+      closeDeclineModal();
+    } catch (error) {
+      console.error('Error declining request:', error);
+      alert('Failed to decline request. Please try again.');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    }
   });
 }
 

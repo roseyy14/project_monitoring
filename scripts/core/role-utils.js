@@ -86,6 +86,29 @@ export function formatRequestDataForRole(data, role) {
     </div>
   `;
   
+  // AIP Document (All roles can see this if available)
+  if (data.aipDocument && data.aipDocument.url) {
+    const fileIcon = data.aipDocument.format === 'pdf' ? '📄' : 
+                     (data.aipDocument.format === 'docx' || data.aipDocument.format === 'doc') ? '📝' : 
+                     (data.aipDocument.format === 'xlsx' || data.aipDocument.format === 'xls') ? '📊' : '📎';
+    const fileSize = data.aipDocument.size ? `(${(data.aipDocument.size / 1024 / 1024).toFixed(2)} MB)` : '';
+    
+    html += `
+      <div class="detail-row" style="background-color: #f0fdf4; border-left: 3px solid #10b981;">
+        <div class="detail-label" style="color:#065f46; font-weight:600;">AIP Document</div>
+        <div class="detail-value">
+          <a href="${data.aipDocument.url}" target="_blank" rel="noopener noreferrer" 
+             style="color: #10b981; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+            <span style="font-size: 1.2em;">${fileIcon}</span>
+            <span>${escapeHtml(data.aipDocument.originalName || 'AIP Document')}</span>
+            <span style="font-size: 0.85em; color: #6b7280;">${fileSize}</span>
+            <span style="font-size: 0.9em;">↗</span>
+          </a>
+        </div>
+      </div>
+    `;
+  }
+  
   // Barangay-specific fields (only for barangay role)
   if (isBarangayRole(role)) {
     if (data.urgency) {

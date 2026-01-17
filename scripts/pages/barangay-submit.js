@@ -11,7 +11,16 @@ protectPage(['barangay_official', 'barangay official', 'baranggay official', 'ba
 const form = document.getElementById('requestForm');
 const signOutBtn = document.getElementById('signOutBtn');
 const budgetYearSelect = document.getElementById('budgetYear');
+const uploadProgress = document.getElementById('uploadProgress');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
 let currentUser = null;
+
+// Cloudinary Configuration
+const CLOUDINARY_CONFIG = {
+  cloudName: 'dimiumaxg',
+  uploadPreset: 'project update'
+};
 
 // --- FUNCTIONS ---
 
@@ -67,6 +76,70 @@ function showSuccess(msg) {
   }
 }
 
+/**
+ * Uploads a file to Cloudinary
+ * @param {File} file - The file to upload
+ * @returns {Promise<{url: string, publicId: string}>} - The uploaded file URL and public ID
+ */
+async function uploadToCloudinary(file) {
+  if (!file) throw new Error('No file provided');
+  
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+  if (file.size > maxSize) {
+    throw new Error('File size exceeds 10MB limit');
+  }
+
+  // Show progress bar
+  if (uploadProgress) uploadProgress.style.display = 'block';
+  if (progressBar) progressBar.style.width = '0%';
+  if (progressText) progressText.textContent = 'Uploading...';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_CONFIG.uploadPreset);
+  formData.append('folder', 'aip-documents'); // Organize in a folder
+
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CONFIG.cloudName}/auto/upload`,
+      {
+        method: 'POST',
+        body: formData
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const data = await response.json();
+    
+    // Update progress to 100%
+    if (progressBar) progressBar.style.width = '100%';
+    if (progressText) progressText.textContent = 'Upload complete!';
+    
+    // Extract file extension from original filename as fallback
+    const fileExtension = file.name.split('.').pop().toLowerCase();
+    
+    return {
+      url: data.secure_url,
+      publicId: data.public_id,
+      format: data.format || fileExtension || 'file',  // Use format from Cloudinary, fallback to extension
+      size: data.bytes || file.size,
+      originalName: file.name
+    };
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw new Error('Failed to upload document. Please try again.');
+  } finally {
+    // Hide progress bar after a short delay
+    setTimeout(() => {
+      if (uploadProgress) uploadProgress.style.display = 'none';
+    }, 2000);
+  }
+}
+
 // --- INITIALIZATION & EVENT LISTENERS ---
 
 // 1. Populate the dropdown on page load
@@ -93,9 +166,14 @@ if (form) {
     const budget = form.budget.value ? Number(form.budget.value) : null;
     const details = form.details.value.trim();
     const contact = form.contact.value.trim();
+    const aipFile = form.aipDocument.files[0];
 
     if (!title || !category || !location || !urgency || !details || !budgetYear) {
       showError('Please fill in all required fields.');
+      return;
+    }
+    if (!aipFile) {
+      showError('Please upload the AIP document.');
       return;
     }
     if (!currentUser) {
@@ -105,8 +183,22 @@ if (form) {
 
     setDisabled(true);
     try {
+      // Upload AIP document to Cloudinary first
+      showSuccess('Uploading document...');
+      const uploadedDoc = await uploadToCloudinary(aipFile);
+      
+      // Then save to Firestore with document URL
+      showSuccess('Saving request...');
       await addDoc(collection(db, 'requests'), {
         title, category, location, urgency, budgetYear, budget, details, contact,
+        aipDocument: {
+          url: uploadedDoc.url,
+          publicId: uploadedDoc.publicId,
+          format: uploadedDoc.format,
+          size: uploadedDoc.size,
+          originalName: uploadedDoc.originalName,
+          uploadedAt: serverTimestamp()
+        },
         isApproved: false,
         status: 'pending_approval',
         createdAt: serverTimestamp(),
@@ -122,7 +214,7 @@ if (form) {
       populateYearOptions(); // <-- Re-populate after reset
     } catch (err) {
       console.error('Failed to submit request:', err);
-      showError('Failed to submit request. Please try again.');
+      showError(err.message || 'Failed to submit request. Please try again.');
     } finally {
       setDisabled(false);
     }

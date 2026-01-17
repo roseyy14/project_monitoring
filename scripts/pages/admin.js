@@ -1,12 +1,16 @@
 import { protectPage } from '../core/role-guard.js';
 import { auth, db } from '../core/firebase.js';
 import { signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
+import { collection, onSnapshot, orderBy, query, updateDoc, doc, serverTimestamp, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js';
 import { getCurrentUserRole, formatRequestDataForRole, escapeHtml } from '../core/role-utils.js';
+import { initEmailService, sendApprovalEmail, sendRejectionEmail } from '../core/email-service.js';
 import "https://cdn.jsdelivr.net/npm/chart.js";
 
 // --- 1. SECURITY & SETUP ---
 protectPage(['admin']);
+
+// Initialize email notification service
+initEmailService();
 
 const signOutBtn = document.getElementById('signOutBtn');
 
@@ -174,13 +178,29 @@ function renderRequestsTable(docs) {
       approveBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if(confirm('Are you sure you want to approve this project?')) {
-          await updateDoc(doc(db, 'requests', id), {
-            isApproved: true,
-            status: 'approved',
-            projectStatus: 'not-started',
-            progress: 0,
-            updatedAt: serverTimestamp()
-          });
+          try {
+            // Get the request data to access creator's email
+            const requestDoc = await getDoc(doc(db, 'requests', id));
+            const requestData = requestDoc.data();
+            
+            // Update the request status
+            await updateDoc(doc(db, 'requests', id), {
+              isApproved: true,
+              status: 'approved',
+              projectStatus: 'not-started',
+              progress: 0,
+              updatedAt: serverTimestamp()
+            });
+            
+            // Send email notification to the barangay official
+            if (requestData && requestData.createdBy && requestData.createdBy.email) {
+              await sendApprovalEmail(requestData.createdBy.email, requestData);
+              console.log('Approval email sent to:', requestData.createdBy.email);
+            }
+          } catch (error) {
+            console.error('Error approving request:', error);
+            alert('Failed to approve request. Please try again.');
+          }
         }
       });
     }
@@ -877,12 +897,24 @@ if (declineForm) {
     }
     
     try {
+      // Get the request data to access creator's email
+      const requestDoc = await getDoc(doc(db, 'requests', currentDeclineRequestId));
+      const requestData = requestDoc.data();
+      
+      // Update the request status
       await updateDoc(doc(db, 'requests', currentDeclineRequestId), {
         isApproved: false,
         status: 'rejected',
         reasonForDecline: reason,
         updatedAt: serverTimestamp()
       });
+      
+      // Send email notification to the barangay official
+      if (requestData && requestData.createdBy && requestData.createdBy.email) {
+        await sendRejectionEmail(requestData.createdBy.email, requestData, reason);
+        console.log('Rejection email sent to:', requestData.createdBy.email);
+      }
+      
       closeDeclineModal();
     } catch (error) {
       console.error('Error declining request:', error);
